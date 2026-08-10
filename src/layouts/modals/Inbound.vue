@@ -54,7 +54,7 @@
               <TProxy v-if="inbound.type == inTypes.TProxy" :inbound="inbound" />
               <Transport v-if="Object.hasOwn(inbound,'transport')" :data="inbound" />
               <Users v-if="hasUser" :clients="clients" :data="initUsers" />
-              <InTls v-if="HasTls.includes(inbound.type)"  :inbound="inbound" :tlsConfigs="tlsConfigs" :tls_id="inbound.tls_id" />
+              <InTls v-if="HasTls.includes(inbound.type)" :inbound="inbound" :tlsConfigs="tlsConfigs" :tls_id="inbound.tls_id" :disabled="loading" @quick-add="quickAddTls" />
               <Multiplex v-if="MuxAvailable.includes(inbound.type)" direction="in" :data="inbound" />
             </v-window-item>
             <v-window-item value="c">
@@ -122,6 +122,8 @@ import Transport from '@/components/Transport.vue'
 import AddrVue from '@/components/Addr.vue'
 import OutJsonVue from '@/components/OutJson.vue'
 import Data from '@/store/modules/data'
+import { tls } from '@/types/tls'
+import HttpUtils from '@/plugins/httputil'
 export default {
   props: ['visible', 'id', 'inTags', 'tlsConfigs'],
   emits: ['close'],
@@ -224,6 +226,57 @@ export default {
     },
     add_addr() {
       this.inbound.addrs?.push(<Addr>{ server: location.hostname, server_port: this.inbound.listen_port })
+    },
+    nextTlsName() {
+      const base = `tls-${this.inbound.tag || 'inbound'}`
+      const names = new Set(this.$props.tlsConfigs.map((item: tls) => item.name))
+      let name = base
+      let suffix = 2
+      while (names.has(name)) {
+        name = `${base}-${suffix++}`
+      }
+      return name
+    },
+    async quickAddTls() {
+      if (this.loading) return
+      this.loading = true
+      const previousIds = new Set(Data().tlsConfigs.map((item: tls) => item.id))
+      const keypair = await HttpUtils.get('api/keypairs', { k: 'tls', o: location.hostname || 'localhost' })
+      if (!keypair.success || keypair.obj.length == 0) {
+        this.loading = false
+        return
+      }
+
+      const privateKey = <string[]>[]
+      const certificate = <string[]>[]
+      let readingPrivateKey = false
+      let readingCertificate = false
+      keypair.obj.forEach((line: string) => {
+        if (line === '-----BEGIN PRIVATE KEY-----') readingPrivateKey = true
+        if (line === '-----BEGIN CERTIFICATE-----') readingCertificate = true
+        if (readingPrivateKey) privateKey.push(line)
+        if (readingCertificate) certificate.push(line)
+        if (line === '-----END PRIVATE KEY-----') readingPrivateKey = false
+        if (line === '-----END CERTIFICATE-----') readingCertificate = false
+      })
+      if (privateKey.length == 0 || certificate.length == 0) {
+        this.loading = false
+        return
+      }
+
+      const newTls = <tls>{
+        id: 0,
+        name: this.nextTlsName(),
+        server: { enabled: true, key: privateKey, certificate },
+        client: {},
+      }
+      const success = await Data().save('tls', 'new', newTls)
+      if (success) {
+        const savedTls = Data().tlsConfigs.find((item: tls) => !previousIds.has(item.id) && item.name == newTls.name)
+        if (savedTls) this.inbound.tls_id = savedTls.id
+      }
+
+      this.loading = false
     },
     closeModal() {
       this.updateData(0) // reset

@@ -9,6 +9,17 @@
           v-model="inbound.tls_id">
         </v-select>
       </v-col>
+      <v-col cols="12" sm="6" md="4" class="d-flex align-center">
+        <v-btn
+          color="primary"
+          variant="tonal"
+          prepend-icon="mdi-plus"
+          :disabled="disabled"
+          @click="$emit('quick-add')"
+        >
+          一键添加 TLS
+        </v-btn>
+      </v-col>
     </v-row>
   </v-card>
 </template>
@@ -16,7 +27,8 @@
 <script lang="ts">
 import { i18n } from '@/locales'
 export default {
-  props: ['inbound', 'tlsConfigs'],
+  props: ['inbound', 'tlsConfigs', 'disabled'],
+  emits: ['quick-add'],
   computed: {
     tlsItems(): any[] {
       return [ { title: i18n.global.t('none'), value: 0 }, ...this.$props.tlsConfigs?.map((t:any) => { return { title: t.name, value: t.id } } )]

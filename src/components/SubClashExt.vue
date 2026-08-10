@@ -166,7 +166,7 @@ export default {
       this.enableEditor = false
     },
     updateMetaJson(data:any, key:string) {
-      let newMetaJson = this.metaJson
+      const newMetaJson = this.metaJson
       if (data==null) {
         delete newMetaJson[key]
       } else {
@@ -245,7 +245,7 @@ export default {
     rules: {
       get() { return this.metaJson.rules.length > 0 ? this.metaJson.rules.filter((r:string) => r != "MATCH,Proxy") : [] },
       set(v:string[]) {
-        let newRules = <string[]>[]
+        const newRules = <string[]>[]
         v.forEach((r:string) => { newRules.push(r) })
         this.updateMetaJson([ ...newRules, "MATCH,Proxy" ], 'rules')
       }

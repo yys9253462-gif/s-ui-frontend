@@ -39,6 +39,18 @@
           <v-col cols="12" sm="6" md="4">
             <v-text-field v-model="settings.webDomain" :label="$t('setting.domain')" hide-details></v-text-field>
           </v-col>
+          <v-col cols="12" sm="6" md="4" class="d-flex align-center">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              prepend-icon="mdi-certificate-outline"
+              :loading="issueCertificateLoading"
+              :disabled="settings.webDomain.trim().length == 0"
+              @click="issueCertificate"
+            >
+              一键申请 SSL 证书
+            </v-btn>
+          </v-col>
           <v-col cols="12" sm="6" md="4">
             <v-text-field v-model="settings.webKeyFile" :label="$t('setting.sslKey')" hide-details></v-text-field>
           </v-col>
@@ -170,6 +182,7 @@ import { push } from 'notivue'
 const tab = ref("t1")
 const loading:Ref = inject('loading')?? ref(false)
 const oldSettings = ref({})
+const issueCertificateLoading = ref(false)
 
 const settings = ref({
 	webListen: "",
@@ -218,6 +231,23 @@ const loadData = async () => {
 const setData = (data: any) => {
   settings.value = data
   oldSettings.value = { ...data }
+}
+
+const issueCertificate = async () => {
+  if (settings.value.webDomain.trim().length == 0) return
+  issueCertificateLoading.value = true
+  const msg = await HttpUtils.post('api/issueCertificate', { domain: settings.value.webDomain.trim() })
+  issueCertificateLoading.value = false
+  if (msg.success) {
+    settings.value.webDomain = msg.obj.webDomain
+    settings.value.webCertFile = msg.obj.webCertFile
+    settings.value.webKeyFile = msg.obj.webKeyFile
+    push.success({
+      title: i18n.global.t('success'),
+      duration: 5000,
+      message: 'SSL 证书已申请，路径已自动填入。请保存设置并重启面板。',
+    })
+  }
 }
 
 const save = async () => {

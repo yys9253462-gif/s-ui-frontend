@@ -55,17 +55,17 @@ export default {
       this.torrc_options = [...this.torrc_options, {name: "", value: ""}]
     },
     del_torrc_option(i:number) {
-      let h = this.torrc_options
+      const h = this.torrc_options
       h.splice(i,1)
       this.torrc_options = h
     },
     update_key(i:number,k:string) {
-      let h = this.torrc_options
+      const h = this.torrc_options
       h[i].name = k
       this.torrc_options = h
     },
     update_value(i:number,v:string) {
-      let h = this.torrc_options
+      const h = this.torrc_options
       h[i].value = v
       this.torrc_options = h
     },
@@ -73,7 +73,7 @@ export default {
   computed: {
     torrc_options: {
       get() :torrc_option[] {
-        let options: torrc_option[] = []
+        const options: torrc_option[] = []
         const h = this.$props.data.torrc
         if (h) {
           Object.keys(h).forEach(key => {
@@ -88,7 +88,7 @@ export default {
       },
       set(v:torrc_option[]) {
         if (v.length>0) {
-          let torrc:any = {}
+          const torrc:any = {}
           v.forEach((h:torrc_option) => {
             if (torrc[h.name]) {
               if (Array.isArray(torrc[h.name])) {

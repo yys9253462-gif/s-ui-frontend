@@ -109,7 +109,7 @@ const modal = ref({
   data: "",
 })
 
-let delOverlay = ref(new Array<boolean>)
+const delOverlay = ref(new Array<boolean>)
 
 const showModal = (id: number) => {
   modal.value.id = id

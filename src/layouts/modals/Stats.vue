@@ -184,7 +184,7 @@ export default {
   methods: {
     async loadData() {
       this.loading = true
-      let params: any = { resource: this.resource, tag: this.tag }
+      const params: any = { resource: this.resource, tag: this.tag }
       let span = this.limit
       if (this.limit === 0) {
         if (!this.rangeStart || !this.rangeEnd || this.rangeEnd <= this.rangeStart) {

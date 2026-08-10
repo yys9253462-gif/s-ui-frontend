@@ -14,13 +14,39 @@
     :tag="stats.tag"
     @close="closeStats"
   />
-  <v-row>
-    <v-col cols="12" justify="center" align="center">
+  <v-row align="center" justify="center">
+    <v-col cols="12" sm="auto" class="text-center">
       <v-btn color="primary" @click="showModal(0)">{{ $t('actions.add') }}</v-btn>
+    </v-col>
+    <v-col cols="12" sm="4" md="3">
+      <v-text-field
+        v-model="searchText"
+        hide-details
+        density="compact"
+        variant="outlined"
+        prepend-inner-icon="mdi-magnify"
+        :label="$t('objects.tag')"
+      />
+    </v-col>
+    <v-col cols="12" sm="3" md="2">
+      <v-select
+        v-model="selectedType"
+        :items="typeItems"
+        hide-details
+        density="compact"
+        variant="outlined"
+        :label="$t('type')"
+      />
+    </v-col>
+    <v-col cols="auto" class="d-flex align-center">
+      <v-btn icon="mdi-account-network" :color="onlineOnly ? 'primary' : undefined" @click="onlineOnly = !onlineOnly">
+        <v-tooltip activator="parent" location="top" :text="$t('online')" />
+      </v-btn>
+      <v-chip class="ms-2" size="small" variant="tonal">{{ displayedInbounds.length }} / {{ inbounds.length }}</v-chip>
     </v-col>
   </v-row>
   <v-row>
-    <v-col cols="12" sm="4" md="3" lg="2" v-for="(item, index) in <any[]>inbounds" :key="item.tag">
+    <v-col cols="12" sm="4" md="3" lg="2" v-for="item in displayedInbounds" :key="item.tag">
       <v-card rounded="xl" elevation="5" min-width="200" :title="item.tag">
         <v-card-subtitle style="margin-top: -15px;">
           <v-row>
@@ -74,12 +100,12 @@
             <v-icon />
             <v-tooltip activator="parent" location="top" :text="$t('actions.edit')"></v-tooltip>
           </v-btn>
-          <v-btn icon="mdi-file-remove" style="margin-inline-start:0;" color="warning" @click="delOverlay[index] = true">
+          <v-btn icon="mdi-file-remove" style="margin-inline-start:0;" color="warning" @click="delOverlay[item.id] = true">
             <v-icon />
             <v-tooltip activator="parent" location="top" :text="$t('actions.del')"></v-tooltip>
           </v-btn>
           <v-overlay
-            v-model="delOverlay[index]"
+            v-model="delOverlay[item.id]"
             contained
             class="align-center justify-center"
           >
@@ -88,7 +114,7 @@
               <v-card-text>{{ $t('confirm') }}</v-card-text>
               <v-card-actions>
                 <v-btn color="error" variant="outlined" @click="delInbound(item.id)">{{ $t('yes') }}</v-btn>
-                <v-btn color="success" variant="outlined" @click="delOverlay[index] = false">{{ $t('no') }}</v-btn>
+                <v-btn color="success" variant="outlined" @click="delOverlay[item.id] = false">{{ $t('no') }}</v-btn>
               </v-card-actions>
             </v-card>
           </v-overlay>
@@ -114,6 +140,7 @@ import { Config } from '@/types/config'
 import { computed, ref } from 'vue'
 import { createInbound, Inbound } from '@/types/inbounds'
 import RandomUtil from '@/plugins/randomUtil'
+import { i18n } from '@/locales'
 
 const appConfig = computed((): Config => {
   return <Config> Data().config
@@ -135,12 +162,32 @@ const onlines = computed(() => {
   return Data().onlines.inbound?? []
 })
 
+const searchText = ref('')
+const selectedType = ref('')
+const onlineOnly = ref(false)
+
+const typeItems = computed(() => [
+  { title: i18n.global.t('all'), value: '' },
+  ...Array.from(new Set(inbounds.value.map(item => item.type))).sort().map(type => ({ title: type, value: type })),
+])
+
+const displayedInbounds = computed((): any[] => {
+  const keyword = searchText.value.trim().toLowerCase()
+  return inbounds.value.filter(item => {
+    if (selectedType.value && item.type != selectedType.value) return false
+    if (onlineOnly.value && !onlines.value.includes(item.tag)) return false
+    if (!keyword) return true
+    return [item.tag, item.type, item.listen, item.listen_port]
+      .some(value => String(value ?? '').toLowerCase().includes(keyword))
+  })
+})
+
 const modal = ref({
   visible: false,
   id: 0,
 })
 
-let delOverlay = ref(new Array<boolean>)
+const delOverlay = ref<Record<number, boolean>>({})
 
 const showModal = (id: number) => {
   modal.value.id = id
@@ -151,20 +198,20 @@ const closeModal = () => {
 }
 
 const delInbound = async (id: number) => {
-  const index = inbounds.value.findIndex(i => i.id == id)
-  const tag = inbounds.value[index].tag
+  const inbound = inbounds.value.find(i => i.id == id)
+  if (!inbound) return
 
-  const success = await Data().save("inbounds", "del", tag)
-  if (success) delOverlay.value[index] = false
+  const success = await Data().save("inbounds", "del", inbound.tag)
+  if (success) delOverlay.value[id] = false
 }
 
-let cloneLoading = ref(false)
+const cloneLoading = ref(false)
 
 const clone = async (id: number) => {
   cloneLoading.value = true
   const inboundArray = await Data().loadInbounds([id])
   const inbound = inboundArray[0]
-  let newTag = inbound.type + "-" + RandomUtil.randomSeq(3)
+  const newTag = inbound.type + "-" + RandomUtil.randomSeq(3)
   const newInbound = createInbound(inbound.type, { ...inbound,
     id: 0,
     tag: newTag,

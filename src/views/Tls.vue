@@ -117,7 +117,7 @@ const showModal = (id: number) => {
   modal.value.visible = true
 }
 const clone = (obj: any) => {
-  let data = JSON.parse(JSON.stringify(obj))
+  const data = JSON.parse(JSON.stringify(obj))
   data.id = 0
   while (tlsConfigs.value.findIndex(t => t.name == data.name) != -1){
     data.name += "-copy"

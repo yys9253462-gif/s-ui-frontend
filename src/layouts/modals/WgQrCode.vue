@@ -98,8 +98,8 @@ export default {
       document.body.removeChild(hiddenButton)
     },
     download(text: string, i: number) {
-      let filename = this.wgData.tag + '_peer_' + (i+1) + '.conf';
-      let element = document.createElement('a');
+      const filename = this.wgData.tag + '_peer_' + (i+1) + '.conf';
+      const element = document.createElement('a');
       element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(text));
       element.setAttribute('download', filename);
 

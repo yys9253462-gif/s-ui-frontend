@@ -97,6 +97,17 @@
                 <v-btn
                   variant="tonal"
                   density="compact"
+                  prepend-icon="mdi-file-import-outline"
+                  @click="importPanelCertPaths"
+                  :loading="loading"
+                >
+                  使用面板证书
+                </v-btn>
+              </v-col>
+              <v-col cols="auto">
+                <v-btn
+                  variant="tonal"
+                  density="compact"
                   icon="mdi-key-star"
                   @click="genSelfSigned"
                   :loading="loading">
@@ -335,6 +346,8 @@ export default {
       menu: false,
       tlsType: 0,
       usePath: 0,
+      panelCertFile: '',
+      panelKeyFile: '',
       alpn: [
         { title: "H3", value: 'h3' },
         { title: "H2", value: 'h2' },
@@ -380,6 +393,7 @@ export default {
   },
   methods: {
     updateData(id: number) {
+      this.loadPanelCertPaths()
       if (id > 0) {
         const newData = <tls>JSON.parse(this.$props.data)
         this.tls = newData
@@ -418,6 +432,24 @@ export default {
       this.$emit('save', this.tls)
       this.loading = false
     },
+    async loadPanelCertPaths() {
+      const msg = await HttpUtils.get('api/settings')
+      if (msg.success) {
+        this.panelCertFile = msg.obj.webCertFile ?? ''
+        this.panelKeyFile = msg.obj.webKeyFile ?? ''
+      }
+    },
+    importPanelCertPaths() {
+      if (!this.panelCertFile || !this.panelKeyFile) {
+        push.error({ message: '请先在面板设置中填写证书和私钥路径' })
+        return
+      }
+      this.inTls.certificate = undefined
+      this.inTls.key = undefined
+      this.inTls.certificate_path = this.panelCertFile
+      this.inTls.key_path = this.panelKeyFile
+      this.usePath = 0
+    },
     async genSelfSigned(){
       this.loading = true
       const msg = await HttpUtils.get('api/keypairs', { k: "tls", o: this.inTls.server_name?? "''" })
@@ -427,8 +459,8 @@ export default {
         this.inTls.certificate_path=undefined
         this.usePath = 1
         if (msg.obj.length>0){
-          let privateKey = <string[]>[]
-          let publicKey = <string[]>[]
+          const privateKey = <string[]>[]
+          const publicKey = <string[]>[]
           let isPrivateKey = false
           let isPublicKey = false
 
