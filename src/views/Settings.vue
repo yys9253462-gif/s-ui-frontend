@@ -139,6 +139,18 @@
           <v-col cols="12" sm="6" md="4">
             <v-text-field v-model="settings.subDomain" :label="$t('setting.domain')" hide-details></v-text-field>
           </v-col>
+          <v-col cols="12" sm="6" md="4" class="d-flex align-center">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              prepend-icon="mdi-certificate-outline"
+              :loading="issueSubCertificateLoading"
+              :disabled="settings.subDomain.trim().length == 0"
+              @click="issueSubCertificate"
+            >
+              一键申请订阅 SSL 证书
+            </v-btn>
+          </v-col>
           <v-col cols="12" sm="6" md="4">
             <v-text-field v-model="settings.subPath" :label="$t('setting.path')" hide-details></v-text-field>
           </v-col>
@@ -183,6 +195,7 @@ const tab = ref("t1")
 const loading:Ref = inject('loading')?? ref(false)
 const oldSettings = ref({})
 const issueCertificateLoading = ref(false)
+const issueSubCertificateLoading = ref(false)
 
 const settings = ref({
 	webListen: "",
@@ -246,6 +259,23 @@ const issueCertificate = async () => {
       title: i18n.global.t('success'),
       duration: 5000,
       message: 'SSL 证书已申请，路径已自动填入。请保存设置并重启面板。',
+    })
+  }
+}
+
+const issueSubCertificate = async () => {
+  if (settings.value.subDomain.trim().length == 0) return
+  issueSubCertificateLoading.value = true
+  const msg = await HttpUtils.post('api/issueCertificate', { domain: settings.value.subDomain.trim() })
+  issueSubCertificateLoading.value = false
+  if (msg.success) {
+    settings.value.subDomain = msg.obj.webDomain
+    settings.value.subCertFile = msg.obj.webCertFile
+    settings.value.subKeyFile = msg.obj.webKeyFile
+    push.success({
+      title: i18n.global.t('success'),
+      duration: 5000,
+      message: '订阅 SSL 证书已申请，路径已自动填入。请保存设置并重启面板。',
     })
   }
 }
